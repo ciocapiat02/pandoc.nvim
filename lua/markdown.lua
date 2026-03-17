@@ -24,7 +24,7 @@ local function open_file(file)
     })
 end
 
-vim.api.nvim_create_user_command("ExportMarkdown", function(opts)
+vim.api.nvim_create_user_command("Pandoc", function(opts)
     local subcmd = opts.fargs[1]
     local current_buffer = vim.api.nvim_get_current_buf()
     local filetype = vim.api.nvim_buf_get_option(current_buffer, "filetype")

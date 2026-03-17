@@ -1,16 +1,18 @@
+local M = {}
+
+local configs = {
+    auto_open = false,
+}
 
 local function call_pandoc(opts)
     opts = opts or {}
     local current_file = vim.fn.fnamemodify(opts.current_file_path, ":t:r")
-    local output_file = opts.export_path..current_file..'.'..opts.export_ext
+    local output_file = opts.export_path .. current_file .. "." .. opts.export_ext
 
     local conversion_result = vim.system(
-        {'pandoc',
-            '-t', opts.template,
-            '-s', opts.file_path,
-            '-o', output_file},
+        { "pandoc", "-t", opts.template, "-s", opts.file_path, "-o", output_file },
         { text = true }
-    ):wait();
+    ):wait()
 
     vim.notify(conversion_result.stdout, vim.log.levels.INFO)
 
@@ -20,11 +22,12 @@ end
 local function open_file(file)
     file = file
     vim.system({
-        "xdg-open", file
+        "xdg-open",
+        file,
     })
 end
 
-vim.api.nvim_create_user_command("Pandoc", function(opts)
+local function convert(opts)
     local subcmd = opts.fargs[1]
     local current_buffer = vim.api.nvim_get_current_buf()
     local filetype = vim.api.nvim_buf_get_option(current_buffer, "filetype")
@@ -33,36 +36,48 @@ vim.api.nvim_create_user_command("Pandoc", function(opts)
     if filetype == "markdown" then
         if subcmd == "html" then
             local output_file = call_pandoc({
-                template = 'html',
+                template = "html",
                 file_path = current_file_path,
                 export_path = "/tmp/",
-                export_ext = "html"
+                export_ext = "html",
             })
-            open_file(output_file)
+            if configs.auto_open then open_file(output_file) end
         elseif subcmd == "pdf" then
             local output_file = call_pandoc({
-                template = 'pdf',
+                template = "pdf",
                 file_path = current_file_path,
                 export_path = "/tmp/",
-                export_ext = "pdf"
+                export_ext = "pdf",
             })
-            open_file(output_file)
+
+            if configs.auto_open then open_file(output_file) end
         elseif subcmd == "slides" then
             local output_file = call_pandoc({
-                template = 'revealjs',
+                template = "revealjs",
                 file_path = current_file_path,
                 export_path = "/tmp/",
-                export_ext = "html"
+                export_ext = "html",
             })
-            open_file(output_file)
+
+            if configs.auto_open then open_file(output_file) end
         else
             vim.notify("Not a know export type", vim.log.levels.WARNING)
         end
     else
         vim.notify("Not a markdown file", vim.log.levels.WARNING)
     end
-end, { nargs = '*',
-    complete = function (arglead, cmdline, cursorpos)
-        return { "html", "pdf", "slides" }
-    end
-})
+end
+
+---@param conf pandoc-nvim.UserConfig?
+function M.setup(conf)
+    configs = vim.tbl_deep_extend("force", configs, conf or {})
+
+    vim.api.nvim_create_user_command("Pandoc", function(opts)
+        convert(opts)
+    end, {
+        nargs = "*",
+        complete = function(arglead, cmdline, cursorpos) return { "html", "pdf", "slides" } end,
+    })
+end
+
+return M

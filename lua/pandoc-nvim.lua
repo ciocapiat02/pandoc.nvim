@@ -8,10 +8,11 @@ local function call_pandoc(opts)
     opts = opts or {}
     local current_file = vim.fn.fnamemodify(opts.current_file_path, ":t:r")
     local output_file = opts.export_path .. current_file .. "." .. opts.export_ext
+    local cwd = vim.fn.fnamemodify(opts.file_path, ":h")
 
     local conversion_result = vim.system(
         { "pandoc", "-t", opts.template, "-s", opts.file_path, "-o", output_file },
-        { text = true }
+        { text = true, cwd=cwd }
     ):wait()
 
     vim.notify(conversion_result.stdout, vim.log.levels.INFO)
@@ -32,7 +33,7 @@ local function convert(opts)
     local current_buffer = vim.api.nvim_get_current_buf()
     local filetype = vim.api.nvim_buf_get_option(current_buffer, "filetype")
     local current_file_path = vim.api.nvim_buf_get_name(current_buffer)
-
+    vim.notify(current_file_path, vim.log.levels.INFO)
     if filetype == "markdown" then
         if subcmd == "html" then
             local output_file = call_pandoc({
@@ -41,6 +42,7 @@ local function convert(opts)
                 export_path = "/tmp/",
                 export_ext = "html",
             })
+
             if configs.auto_open then open_file(output_file) end
         elseif subcmd == "pdf" then
             local output_file = call_pandoc({

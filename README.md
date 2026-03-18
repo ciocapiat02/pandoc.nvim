@@ -1,5 +1,22 @@
 # pandoc.nvim
 
+## Installation
+With lazy:
+```lua
+return {
+    "ciocapiat02/pandoc.nvim",
+
+    config = function ()
+       require("pandoc-nvim").setup({
+           -- automatically open the file with xdg-open after its conversion
+           auto_open=true,
+           -- html template file to look for, the plugin looks in the converted file directory
+           html_template="template.html"
+       }) 
+    end
+}
+```
+
 ## Description
 A simple and (not yet) configurable neovim plugin that wraps pandoc.
 
@@ -20,7 +37,8 @@ navigationMode: linear
 css: my-theme.css
 ```
 
-this header will create a slides html file with reveal.js with a custom css theme
+this header will create a slides html file with reveal.js and a custom css theme
+
 
 ## Roadmap
 - make it configurable:

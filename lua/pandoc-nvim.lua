@@ -1,7 +1,8 @@
 local M = {}
 
 local configs = {
-    auto_open = false,
+    auto_open = false, -- wether to automatically open the file after conversion 
+    html_template = nil, -- User can set a default template path here, the template must be in the same directory of the actual file
 }
 
 local function call_pandoc(opts)
@@ -9,9 +10,17 @@ local function call_pandoc(opts)
     local current_file = vim.fn.fnamemodify(opts.current_file_path, ":t:r")
     local output_file = opts.export_path .. current_file .. "." .. opts.export_ext
     local cwd = vim.fn.fnamemodify(opts.file_path, ":h")
+    local cmd = { "pandoc", "-t", opts.template, "-s", opts.file_path, "-o", output_file }
 
+    -- add custom html template if set
+    local html_template = opts.html_template or configs.html_template
+    if html_template then
+        table.insert(cmd, 2, "--template=" .. html_template)
+    end
+
+    -- call pandoc
     local conversion_result = vim.system(
-        { "pandoc", "-t", opts.template, "-s", opts.file_path, "-o", output_file },
+        cmd,
         { text = true, cwd=cwd }
     ):wait()
 

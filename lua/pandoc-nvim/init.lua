@@ -1,13 +1,26 @@
-local M = {}
+local server = require("pandoc-nvim.server")
+
+local M = {
+    file_to_watch = "/tmp/stuff.html",
+    already_connected = false,
+}
 
 local configs = {
     auto_open = false, -- wether to automatically open the file after conversion
     html_template = nil, -- User can set a default template path here, the template must be in the same directory of the actual file
 }
 
+local function connect_client(link)
+    M.already_connected = true
+    vim.system({
+        "xdg-open",
+        link,
+    })
+end
+
 local function call_pandoc(opts)
     opts = opts or {}
-    local current_file = vim.fn.fnamemodify(opts.current_file_path, ":t:r")
+    local current_file = vim.fn.fnamemodify(opts.file_path, ":t:r")
     local output_file = opts.export_path .. current_file .. "." .. opts.export_ext
     local cwd = vim.fn.fnamemodify(opts.file_path, ":h")
     local cmd = { "pandoc", "-t", opts.template, "-s", opts.file_path, "-o", output_file }
@@ -24,12 +37,23 @@ local function call_pandoc(opts)
     return output_file
 end
 
-local function open_file(file)
-    file = file
-    vim.system({
-        "xdg-open",
-        file,
-    })
+-- opts is a table containing
+-- {file: file name, kind: {"file" | "server"} }
+local function open_file(opts)
+    if opts.kind == "file" then
+        file = opts.file
+        vim.system({
+            "xdg-open",
+            file,
+        })
+    elseif opts.kind == "server" then
+        if not server.get_server_started() then server.start_server(M.file_to_watch) end
+        if not M.already_connected then
+            connect_client(opts.file)
+        else
+            server.update()
+        end
+    end
 end
 
 local function convert(opts)
@@ -37,7 +61,6 @@ local function convert(opts)
     local current_buffer = vim.api.nvim_get_current_buf()
     local filetype = vim.api.nvim_buf_get_option(current_buffer, "filetype")
     local current_file_path = vim.api.nvim_buf_get_name(current_buffer)
-    vim.notify(current_file_path, vim.log.levels.INFO)
     if filetype == "markdown" then
         if subcmd == "html" then
             local output_file = call_pandoc({
@@ -47,7 +70,9 @@ local function convert(opts)
                 export_ext = "html",
             })
 
-            if configs.auto_open then open_file(output_file) end
+            M.file_to_watch = output_file
+
+            if configs.auto_open then open_file({ kind = "server", file = "http://127.0.0.1:9090" }) end
         elseif subcmd == "pdf" then
             local output_file = call_pandoc({
                 template = "pdf",
@@ -56,7 +81,7 @@ local function convert(opts)
                 export_ext = "pdf",
             })
 
-            if configs.auto_open then open_file(output_file) end
+            if configs.auto_open then open_file({ kind = "file", file = output_file }) end
         elseif subcmd == "slides" then
             local output_file = call_pandoc({
                 template = "revealjs",
@@ -65,7 +90,8 @@ local function convert(opts)
                 export_ext = "html",
             })
 
-            if configs.auto_open then open_file(output_file) end
+            M.file_to_watch = output_file
+            if configs.auto_open then open_file({ kind = "server", file = "http://127.0.0.1:9090" }) end
         else
             vim.notify("Not a know export type", vim.log.levels.WARNING)
         end

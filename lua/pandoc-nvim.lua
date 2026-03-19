@@ -1,7 +1,7 @@
 local M = {}
 
 local configs = {
-    auto_open = false, -- wether to automatically open the file after conversion 
+    auto_open = false, -- wether to automatically open the file after conversion
     html_template = nil, -- User can set a default template path here, the template must be in the same directory of the actual file
 }
 
@@ -14,15 +14,10 @@ local function call_pandoc(opts)
 
     -- add custom html template if set
     local html_template = opts.html_template or configs.html_template
-    if html_template then
-        table.insert(cmd, 2, "--template=" .. html_template)
-    end
+    if html_template then table.insert(cmd, 2, "--template=" .. html_template) end
 
     -- call pandoc
-    local conversion_result = vim.system(
-        cmd,
-        { text = true, cwd=cwd }
-    ):wait()
+    local conversion_result = vim.system(cmd, { text = true, cwd = cwd }):wait()
 
     vim.notify(conversion_result.stdout, vim.log.levels.INFO)
 
@@ -83,9 +78,7 @@ end
 function M.setup(conf)
     configs = vim.tbl_deep_extend("force", configs, conf or {})
 
-    vim.api.nvim_create_user_command("Pandoc", function(opts)
-        convert(opts)
-    end, {
+    vim.api.nvim_create_user_command("Pandoc", function(opts) convert(opts) end, {
         nargs = "*",
         complete = function(arglead, cmdline, cursorpos) return { "html", "pdf", "slides" } end,
     })

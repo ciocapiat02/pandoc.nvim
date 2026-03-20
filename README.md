@@ -7,12 +7,18 @@ return {
     "ciocapiat02/pandoc.nvim",
 
     config = function ()
-       require("pandoc-nvim").setup({
-           -- automatically open the file with xdg-open after its conversion
-           auto_open=true,
-           -- html template file to look for, the plugin looks in the converted file directory
-           html_template="template.html"
-       }) 
+        require("pandoc-nvim").setup({
+            local configs = {
+                -- wether to automatically open the file after conversion, if the output is in html format, it will be open in the browser using a web server
+                auto_open = false,
+                -- User can set a default template path here, the template must be in the same directory of the actual file
+                html_template = nil,
+                -- default path in which the export file will be put (don't forget to add the '/' character at the end)
+                default_export_path = "./pandoc_output/",
+                -- whether to add or not the --katex flag
+                enable_katex = true,
+            }
+        }) 
     end
 }
 ```
@@ -20,7 +26,9 @@ return {
 ## Description
 A simple and (not yet) configurable neovim plugin that wraps pandoc.
 
-At this time it can convert a markdown file to:
+To call it you just need to use the command `pandoc [format]`
+
+At this time it can convert a markdown files to:
 - html
 - pdf (pdflatex)
 - slides (revealjs)
@@ -39,7 +47,7 @@ css: my-theme.css
 
 this header will create a slides html file with reveal.js and a custom css theme
 
-
+## Little tip
 ## Roadmap
 - make it configurable:
     - html templates

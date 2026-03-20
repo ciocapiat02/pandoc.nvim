@@ -1,14 +1,20 @@
 local server = require("pandoc-nvim.server")
 
 local M = {
-    file_to_watch = "/tmp/stuff.html",
+    file_to_watch = nil,
     already_connected = false,
 }
 
 local configs = {
     auto_open = false, -- wether to automatically open the file after conversion
     html_template = nil, -- User can set a default template path here, the template must be in the same directory of the actual file
+    default_export_path = "./pandoc_output/", -- default path in which the export file will be put (don't forget to add the '/' character at the end)
+    enable_katex = true, -- whether to add or not the --katex flag
 }
+
+local function check_output_dir(directory)
+    if vim.fn.isdirectory(directory) == 0 then vim.fn.mkdir(directory, "p") end
+end
 
 local function connect_client(link)
     M.already_connected = true
@@ -24,10 +30,17 @@ local function call_pandoc(opts)
     local output_file = opts.export_path .. current_file .. "." .. opts.export_ext
     local cwd = vim.fn.fnamemodify(opts.file_path, ":h")
     local cmd = { "pandoc", "-t", opts.template, "-s", opts.file_path, "-o", output_file }
+    check_output_dir(opts.export_path)
 
     -- add custom html template if set
     local html_template = opts.html_template or configs.html_template
-    if html_template then table.insert(cmd, 2, "--template=" .. html_template) end
+    if html_template and vim.fn.filereadable(html_template)==1 then
+        table.insert(cmd, 2, "--template=" .. html_template)
+    end
+
+    -- add katex rendering
+    local html_template = opts.html_template or configs.html_template
+    if html_template then table.insert(cmd, 2, "--katex") end
 
     -- call pandoc
     local conversion_result = vim.system(cmd, { text = true, cwd = cwd }):wait()
@@ -66,7 +79,7 @@ local function convert(opts)
             local output_file = call_pandoc({
                 template = "html",
                 file_path = current_file_path,
-                export_path = "/tmp/",
+                export_path = configs.default_export_path,
                 export_ext = "html",
             })
 
@@ -77,7 +90,7 @@ local function convert(opts)
             local output_file = call_pandoc({
                 template = "pdf",
                 file_path = current_file_path,
-                export_path = "/tmp/",
+                export_path = configs.default_export_path,
                 export_ext = "pdf",
             })
 
@@ -86,11 +99,12 @@ local function convert(opts)
             local output_file = call_pandoc({
                 template = "revealjs",
                 file_path = current_file_path,
-                export_path = "/tmp/",
+                export_path = configs.default_export_path,
                 export_ext = "html",
             })
 
             M.file_to_watch = output_file
+
             if configs.auto_open then open_file({ kind = "server", file = "http://127.0.0.1:9090" }) end
         else
             vim.notify("Not a know export type", vim.log.levels.WARNING)

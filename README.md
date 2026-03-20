@@ -24,7 +24,7 @@ return {
 ```
 
 ## Description
-A simple and (not yet) configurable neovim plugin that wraps pandoc.
+A simple and configurable neovim plugin that wraps pandoc.
 
 To call it you just need to use the command `pandoc [format]`
 

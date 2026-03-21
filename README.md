@@ -17,6 +17,8 @@ return {
                 default_export_path = "./pandoc_output/",
                 -- whether to add or not the --katex flag
                 enable_katex = true,
+                -- whether to add or not the --self-contained=true flag
+                self_contained = false, 
             }
         }) 
     end

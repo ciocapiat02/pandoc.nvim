@@ -10,6 +10,7 @@ local configs = {
     html_template = nil, -- User can set a default template path here, the template must be in the same directory of the actual file
     default_export_path = "./pandoc_output/", -- default path in which the export file will be put (don't forget to add the '/' character at the end)
     enable_katex = true, -- whether to add or not the --katex flag
+    self_contained = false, -- whether to add or not the --self-contained=true flag
 }
 
 local function check_output_dir(directory)
@@ -28,26 +29,28 @@ local function call_pandoc(opts)
     opts = opts or {}
     local current_file = vim.fn.fnamemodify(opts.file_path, ":t:r")
     local output_file = opts.export_path .. current_file .. "." .. opts.export_ext
-    local cwd = vim.fn.fnamemodify(opts.file_path, ":h")
-    local cmd = { "pandoc", "-t", opts.template, "-s", opts.file_path, "-o", output_file }
-    check_output_dir(opts.export_path)
+    local cwd = vim.fn.fnamemodify(opts.file_path, ":h") .. "/"
+    local cmd = { "pandoc", "-t", opts.template, "-s", opts.file_path, "-o", output_file, '--self-contained=true' }
+    check_output_dir(cwd .. opts.export_path)
 
     -- add custom html template if set
     local html_template = opts.html_template or configs.html_template
-    if html_template and vim.fn.filereadable(html_template)==1 then
+    if html_template and vim.fn.filereadable(cwd .. html_template)==1 then
         table.insert(cmd, 2, "--template=" .. html_template)
     end
 
     -- add katex rendering
-    local html_template = opts.html_template or configs.html_template
-    if html_template then table.insert(cmd, 2, "--katex") end
+    if configs.enable_katex then table.insert(cmd, 2, "--katex") end
+
+    -- add self-contained flag
+    if configs.self_contained then table.insert(cmd, 2, "--self-contained=true") end
 
     -- call pandoc
     local conversion_result = vim.system(cmd, { text = true, cwd = cwd }):wait()
 
     vim.notify(conversion_result.stdout, vim.log.levels.INFO)
 
-    return output_file
+    return cwd .. output_file
 end
 
 -- opts is a table containing

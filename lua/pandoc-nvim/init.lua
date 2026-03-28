@@ -25,7 +25,7 @@ local function connect_client(link)
     })
 end
 
-local function call_pandoc(opts)
+local function call_pandoc(opts, on_complete)
     opts = opts or {}
     local current_file = vim.fn.fnamemodify(opts.file_path, ":t:r")
     local output_file = opts.export_path .. current_file .. "." .. opts.export_ext
@@ -46,11 +46,13 @@ local function call_pandoc(opts)
     if configs.self_contained then table.insert(cmd, 2, "--self-contained=true") end
 
     -- call pandoc
-    local conversion_result = vim.system(cmd, { text = true, cwd = cwd }):wait()
-
-    vim.notify(conversion_result.stdout, vim.log.levels.INFO)
-
-    return cwd .. output_file
+    vim.system(cmd, { text = true, cwd = cwd }, function(conversion_result)
+        vim.schedule(function()
+            if on_complete then
+                on_complete(cwd .. output_file)
+            end
+        end)
+    end)
 end
 
 -- opts is a table containing
@@ -79,36 +81,38 @@ local function convert(opts)
     local current_file_path = vim.api.nvim_buf_get_name(current_buffer)
     if filetype == "markdown" then
         if subcmd == "html" then
-            local output_file = call_pandoc({
+            call_pandoc({
                 template = "html",
                 file_path = current_file_path,
                 export_path = configs.default_export_path,
                 export_ext = "html",
-            })
+            }, function(output_file)
+                print(output_file)
+                M.file_to_watch = output_file
+                if configs.auto_open then open_file({ kind = "server", file = "http://127.0.0.1:9090" }) end
+            end)
 
-            M.file_to_watch = output_file
-
-            if configs.auto_open then open_file({ kind = "server", file = "http://127.0.0.1:9090" }) end
         elseif subcmd == "pdf" then
-            local output_file = call_pandoc({
+            call_pandoc({
                 template = "pdf",
                 file_path = current_file_path,
                 export_path = configs.default_export_path,
                 export_ext = "pdf",
-            })
+            }, function (output_file)
+                if configs.auto_open then open_file({ kind = "file", file = output_file }) end
+            end)
 
-            if configs.auto_open then open_file({ kind = "file", file = output_file }) end
         elseif subcmd == "slides" then
-            local output_file = call_pandoc({
+            call_pandoc({
                 template = "revealjs",
                 file_path = current_file_path,
                 export_path = configs.default_export_path,
                 export_ext = "html",
-            })
+            },function (output_file)
+                M.file_to_watch = output_file
+                if configs.auto_open then open_file({ kind = "server", file = "http://127.0.0.1:9090" }) end
+            end)
 
-            M.file_to_watch = output_file
-
-            if configs.auto_open then open_file({ kind = "server", file = "http://127.0.0.1:9090" }) end
         else
             vim.notify("Not a know export type", vim.log.levels.WARNING)
         end
